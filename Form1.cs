@@ -1,4 +1,6 @@
 ﻿using System.Data;
+using System.IO.Packaging;
+using System.Linq;
 using OfficeOpenXml;
 
 namespace ReadDataSetApp
@@ -8,6 +10,10 @@ namespace ReadDataSetApp
         public Form1()
         {
             InitializeComponent();
+
+            lblAverage.Visible = false;
+            lblAvgOfAvgMaxMonth.Visible = false;
+            btnProcess.Enabled = false;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -28,12 +34,15 @@ namespace ReadDataSetApp
             else
             {
                 Console.WriteLine("No file selected.");
-                btnProcess.Enabled = false;
+                if (string.IsNullOrEmpty(filePathtext.Text))
+                    btnProcess.Enabled = false;
             }
         }
 
         private void btnProcess_Click(object sender, EventArgs e)
         {
+            dataGridView1.Enabled = false;
+
             if (!int.TryParse(txtMaxOrder.Text, out int txtMaxOrderValue))
             {
                 MessageBox.Show("ادخل قيمة ترتيب الماكس");
@@ -42,10 +51,11 @@ namespace ReadDataSetApp
 
             ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
 
+
             // Define file path and sheet names
             string filePath = filePathtext.Text;
-            string dataSheetName = "data";
-            string exportSheetName = "ExportSheet";
+            string exportSheetName = $"Max{txtMaxOrder.Text}";
+
 
             // Validate file existence
             if (!File.Exists(filePath))
@@ -54,47 +64,68 @@ namespace ReadDataSetApp
                 return;
             }
 
-            DataTable dataTable = ReadExcelData(filePath, dataSheetName);
-            if (dataTable == null)
-            {
-                Console.WriteLine($"Worksheet '{dataSheetName}' not found or failed to read data.");
-                return;
-            }
+            DataTable dataTable = ReadExcelData(filePath);
 
             DataTable resultTable = ProcessData(dataTable);
 
             dataGridView1.DataSource = resultTable;
 
             WriteToExcel(filePath, exportSheetName, resultTable);
+
+            dataGridView1.Enabled = true;
         }
-        static DataTable ReadExcelData(string filePath, string sheetName)
+        public DataTable ReadExcelData(string filePath)
         {
             try
             {
                 using (var package = new ExcelPackage(new FileInfo(filePath)))
                 {
+                    ExcelWorksheet Worksheet = package.Workbook.Worksheets[0];
+
+                    var sheetName = Worksheet.Name;
+
                     var worksheet = package.Workbook.Worksheets[sheetName];
                     if (worksheet == null) return null;
 
                     DataTable dataTable = new DataTable();
                     int columns = worksheet.Dimension.Columns;
 
+                    dataTable.Columns.Add("اليوم", typeof(double));//worksheet.Cells[1, 1].Text
+                    dataTable.Columns.Add("السرعة بالميغا", typeof(double));//worksheet.Cells[1, 9].Text
+
                     // Read header row
-                    for (int col = 1; col <= columns; col++)
-                    {
-                        dataTable.Columns.Add(worksheet.Cells[1, col].Text, typeof(double));
-                    }
+                    //for (int col = 1; col <= columns; col++)
+                    //{
+                    //    dataTable.Columns.Add(worksheet.Cells[1, col].Text, typeof(double));
+                    //}
 
                     // Read data rows
                     int rows = worksheet.Dimension.Rows;
+
                     for (int row = 2; row <= rows; row++)
                     {
-                        DataRow dataRow = dataTable.NewRow();
-                        for (int col = 1; col <= columns; col++)
+                        try
                         {
-                            dataRow[col - 1] = worksheet.Cells[row, col].Text;
+
+                            DataRow dataRow = dataTable.NewRow();
+
+                            dataRow[0] = worksheet.Cells[row, 1].Text.Split("/")[1];
+
+                            if (chkIsInput.Checked)
+                                dataRow[1] = worksheet.Cells[row, 5].Text == "" ? 0.0 : worksheet.Cells[row, 5].Text.Replace("Mbit/s", "").Trim();
+                            else
+                                dataRow[1] = worksheet.Cells[row, 9].Text == "" ? 0.0 : worksheet.Cells[row, 9].Text.Replace("Mbit/s", "").Trim();
+
+                            dataTable.Rows.Add(dataRow);
+
                         }
-                        dataTable.Rows.Add(dataRow);
+                        catch (IndexOutOfRangeException)
+                        {
+                            var text = worksheet.Cells[row, 1].Text;
+                            if (text.Contains("Sums"))
+                                break;
+
+                        }
                     }
 
                     return dataTable;
@@ -110,7 +141,7 @@ namespace ReadDataSetApp
         public DataTable ProcessData(DataTable dataTable)
         {
             var groupedByDay = from row in dataTable.AsEnumerable()
-                               group row by row.Field<double>("Day") into dayGroup
+                               group row by row.Field<double>("اليوم") into dayGroup
                                select new
                                {
                                    Day = dayGroup.Key,
@@ -118,30 +149,67 @@ namespace ReadDataSetApp
                                };
 
             DataTable resultTable = CreateDataTableWithSameSchema(dataTable);
+            resultTable.Columns.Add($"متوسط {txtAverageMaxDay.Text} ماكس باليوم الواحد", typeof(double));
+            double sum = 0.0;
+            double sumOfAvg = 0.0;
+            int count = 0;
 
             foreach (var group in groupedByDay)
             {
                 DataRow resultRow = resultTable.NewRow();
-                resultRow["Day"] = group.Day;
+                resultRow["اليوم"] = group.Day;
 
                 // Process each group
                 foreach (DataColumn column in dataTable.Columns)
                 {
-                    if (column.ColumnName != "Day")
+                    if (column.ColumnName != "اليوم")
                     {
                         var sortedData = group.Data.AsEnumerable()
                                                    .OrderByDescending(row => row.Field<double>(column.ColumnName))
                                                    .ToList();
+                        int AverageMaxDay = 5;
+                        try
+                        {
+                            AverageMaxDay = int.Parse(txtAverageMaxDay.Text.ToString());
+                        }
+                        catch (Exception)
+                        {
+                        }
+
+                        var avgMaxDay = sortedData.Select(x => Convert.ToDouble(x["السرعة بالميغا"])) // Convert to double
+                        .Take(AverageMaxDay)
+                        .Average();
+
+                        sumOfAvg += avgMaxDay;
+
+                        resultRow[$"متوسط {txtAverageMaxDay.Text} ماكس باليوم الواحد"] = Math.Round(double.Parse(avgMaxDay.ToString()), 0);
 
                         // Populate the result row based on sorted data
                         if (sortedData.Any())
                         {
                             resultRow[column.ColumnName] = sortedData[int.Parse(txtMaxOrder.Text.ToString()) - 1][column.ColumnName];
+                            sum += double.Parse(sortedData[int.Parse(txtMaxOrder.Text.ToString()) - 1][column.ColumnName].ToString());
+                            count++;
                         }
                     }
                 }
                 resultTable.Rows.Add(resultRow);
             }
+
+            var average = sum / count;
+            var averageOfAvg = sumOfAvg / count;
+
+            lblAverage.Text = "متوسط الماكس المطلوب: " + Math.Round(double.Parse(average.ToString()), 0);
+
+            lblAvgOfAvgMaxMonth.Text = "متوسط المتوسطات: " + Math.Round(double.Parse(averageOfAvg.ToString()), 0);
+
+            lblAvgOfAvgMaxMonth.Visible = true;
+            lblAverage.Visible = true;
+            //DataRow resultRow1 = resultTable.NewRow();
+            //resultRow1["اليوم"] = -1;
+            //resultRow1["السرعة بالميغا"] = average;
+            //resultTable.Rows.Add(resultRow1);
+
 
             return resultTable;
         }
@@ -204,6 +272,36 @@ namespace ReadDataSetApp
         }
 
         private void txtMaxOrder_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtAverageMaxDay_TextChanged(object sender, EventArgs e)
+        {
+            if (int.TryParse(txtAverageMaxDay.Text, out int value))
+            {
+                if (value <= 0)
+                {
+                    MessageBox.Show("Please enter a number greater than 0.");
+                    txtAverageMaxDay.Clear();
+                }
+            }
+            else if (!string.IsNullOrEmpty(txtAverageMaxDay.Text))
+            {
+                MessageBox.Show("Please enter a valid number.");
+                txtAverageMaxDay.Clear();
+            }
+        }
+
+        private void txtAverageMaxDay_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
             {
