@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34622.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReadDataSetApp", "ReadDataSetApp.csproj", "{DAEE4829-B6D8-43E7-A52E-BBC4470BE0FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReadDataSetApp", "ReadDataSetApp.csproj", "{DAEE4829-B6D8-43E7-A52E-BBC4470BE0FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoMapperTest", "..\AutoMapperTest\AutoMapperTest.csproj", "{B4FB76D1-30C5-479A-A10C-26AE2CD738E9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataLayer", "..\DataLayer\DataLayer.csproj", "{E66E3CA0-69EF-41FD-AAE7-93A9B87968E5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{DAEE4829-B6D8-43E7-A52E-BBC4470BE0FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAEE4829-B6D8-43E7-A52E-BBC4470BE0FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DAEE4829-B6D8-43E7-A52E-BBC4470BE0FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4FB76D1-30C5-479A-A10C-26AE2CD738E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4FB76D1-30C5-479A-A10C-26AE2CD738E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4FB76D1-30C5-479A-A10C-26AE2CD738E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4FB76D1-30C5-479A-A10C-26AE2CD738E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E66E3CA0-69EF-41FD-AAE7-93A9B87968E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E66E3CA0-69EF-41FD-AAE7-93A9B87968E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E66E3CA0-69EF-41FD-AAE7-93A9B87968E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E66E3CA0-69EF-41FD-AAE7-93A9B87968E5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
