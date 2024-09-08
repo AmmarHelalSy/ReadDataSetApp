@@ -1,12 +1,7 @@
 ﻿using System.Data;
-using System.IO.Packaging;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
-using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.VisualBasic.FileIO;
 using OfficeOpenXml;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace ReadDataSetApp
 {
@@ -26,7 +21,7 @@ namespace ReadDataSetApp
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
                 InitialDirectory = Properties.Settings.Default.LastFilePath ?? "C:\\",
-                Filter = "Excel Files (*.xlsx)|*.xlsx|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                Filter = "CSV Files (*.csv)|*.csv|Excel Files (*.xlsx)|*.xlsx|All Files (*.*)|*.*",
                 FilterIndex = 1,
                 RestoreDirectory = true
             };
@@ -66,6 +61,8 @@ namespace ReadDataSetApp
         private void btnProcess_Click(object sender, EventArgs e)
         {
             dataGridView1.Enabled = false;
+            btnProcess.Enabled = false;
+            Clear();
 
             if (!int.TryParse(txtMaxOrder.Text, out int txtMaxOrderValue))
             {
@@ -103,7 +100,14 @@ namespace ReadDataSetApp
             }
 
             dataGridView1.Enabled = true;
+            btnProcess.Enabled = true;
         }
+
+        private void Clear()
+        {
+            dataGridView1.DataSource = null;
+        }
+
         public DataTable LoadCsvToDataTable(string filePath)
         {
             DataTable dataTable = new DataTable();
@@ -197,10 +201,11 @@ namespace ReadDataSetApp
                     }
 
                     string rawValue = dataTableCsv.Rows[index][valueColumnIndex].ToString();
-                    if (! string.IsNullOrWhiteSpace(rawValue) && ! rawValue.Contains("Mbit"))
+                    if (!string.IsNullOrWhiteSpace(rawValue) && !rawValue.Contains("Mbit"))
                     {
                         MessageBox.Show("اختر العمود الصحيح");
                         dataRow[1] = 0.0;
+                        break;
                     }
                     else
                     {
@@ -235,7 +240,7 @@ namespace ReadDataSetApp
         }
 
 
-    public DataTable ReadHeaders(string filePath)
+        public DataTable ReadHeaders(string filePath)
         {
             if (filePath.EndsWith(".csv"))
             {
@@ -343,10 +348,14 @@ namespace ReadDataSetApp
                         MatchCollection matches = regex.Matches(time);
                         var hour = -1;
 
+
+
                         if (rdDay.Checked)
                         {
                             if (matches.Count == 2)
                                 hour = int.Parse(matches[0].Value.Split(":")[0].ToString());
+                            if (time.ToUpper().Contains("PM"))
+                                hour += 12;
                             if (hour > 17 && hour < 24)
                                 continue;
                         }
@@ -354,6 +363,8 @@ namespace ReadDataSetApp
                         {
                             if (matches.Count == 2)
                                 hour = int.Parse(matches[0].Value.Split(":")[0].ToString());
+                            if (time.ToUpper().Contains("PM"))
+                                hour += 12;
                             if (hour < 18)
                                 continue;
                         }
@@ -379,9 +390,10 @@ namespace ReadDataSetApp
                         {
 
                         }
-                        catch(Exception)
+                        catch (Exception)
                         {
                             MessageBox.Show("حدثت مشكلة");
+                            break;
                         }
                     }
 
@@ -458,7 +470,7 @@ namespace ReadDataSetApp
                                     resultRow[column.ColumnName] = sortedData[maxIndex - 1][column.ColumnName];
                                 }
                                 var value = double.Parse(sortedData[int.Parse(txtMaxOrder.Text.ToString()) - 1][column.ColumnName].ToString());
-                                if(value>0)
+                                if (value > 0)
                                 {
                                     sum += value;
                                     count++;
@@ -591,6 +603,16 @@ namespace ReadDataSetApp
             lblValue1.Text = (cbxValue1.SelectedIndex + 1).ToString();
 
             btnProcess.Enabled = true;
+        }
+
+        private void rdTotal_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }
